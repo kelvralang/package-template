@@ -1,0 +1,5 @@
+const packageTemplate = @import("github.com/moglang/package-template")
+
+if (packageTemplate.greeting() != "Mog package template") {
+    error("template package greeting")
+}

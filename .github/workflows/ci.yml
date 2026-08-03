@@ -1,0 +1,72 @@
+name: Package CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compatibility:
+    name: Mog main
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PACKAGE_NAME: "package-template"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          repository: moglang/mog
+          ref: main
+          path: .runtime/mog
+      - name: Verify release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^version = "\([^\"]*\)"/\1/p' mog.toml | head -n 1)"
+          test -n "$version"
+          test -f LICENSE
+          test -f package.api.mog
+          test -f tests/main.mog
+          grep -Fq "## $version" CHANGELOG.md
+          grep -q '^```mog' README.md
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            test "${GITHUB_REF_NAME#v}" = "$version"
+          fi
+      - name: Build Mog runtime
+        run: |
+          cmake -S .runtime/mog -B .runtime/mog/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build .runtime/mog/build --parallel
+      - name: Validate package and run tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime="$GITHUB_WORKSPACE/.runtime/mog/build/interpreter"
+          version="$(sed -n 's/^version = "\([^\"]*\)"/\1/p' mog.toml | head -n 1)"
+          stage="$RUNNER_TEMP/github.com/moglang/$PACKAGE_NAME"
+          project="$RUNNER_TEMP/package-test"
+          mkdir -p "$(dirname "$stage")" "$project"
+          rsync -a --exclude .git --exclude .runtime "$GITHUB_WORKSPACE/" "$stage/"
+          "$runtime" validate-package "$stage"
+          sed -e "s|__PACKAGE_NAME__|$PACKAGE_NAME|g" -e "s|__PACKAGE_VERSION__|$version|g" -e "s|__PACKAGE_PATH__|$stage|g" \
+            "$GITHUB_WORKSPACE/.github/package-test.toml.in" > "$project/mog.toml"
+          (cd "$project" && MOG_CACHE_DIR="$RUNNER_TEMP/mog-cache" "$runtime" run "$stage/tests/main.mog")
+
+  validate:
+    if: always()
+    needs: compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require compatibility test
+        env:
+          RESULT: ${{ needs.compatibility.result }}
+        run: test "$RESULT" = success
