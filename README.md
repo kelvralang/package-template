@@ -7,3 +7,8 @@ and tests.
 
 The included CI validates the package against Mog `main`; the release workflow
 creates a source archive and checksum when a matching `v*` tag is pushed.
+
+```mog
+const packageTemplate = @import("github.com/moglang/package-template")
+print(packageTemplate.greeting())
+```
