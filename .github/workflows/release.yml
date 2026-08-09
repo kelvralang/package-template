@@ -5,38 +5,10 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   release:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    env:
-      PACKAGE_NAME: "package-template"
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - name: Verify tag and manifest version
-        shell: bash
-        run: |
-          set -euo pipefail
-          version="$(sed -n 's/^version = "\([^\"]*\)"/\1/p' mog.toml | head -n 1)"
-          test "${GITHUB_REF_NAME#v}" = "$version"
-          grep -Fq "## $version" CHANGELOG.md
-      - name: Bundle source package and checksum
-        shell: bash
-        run: |
-          set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
-          bundle="$RUNNER_TEMP/$PACKAGE_NAME-$version"
-          mkdir -p "$bundle"
-          rsync -a --exclude .git --exclude .github --exclude .runtime --exclude build ./ "$bundle/"
-          tar -C "$RUNNER_TEMP" -czf "$PACKAGE_NAME-$version.tar.gz" "$PACKAGE_NAME-$version"
-          sha256sum "$PACKAGE_NAME-$version.tar.gz" > SHA256SUMS
-      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
-        with:
-          files: |
-            package-template-*.tar.gz
-            SHA256SUMS
-          fail_on_unmatched_files: true
+    uses: moglang/package-actions/.github/workflows/source-release.yml@v1
+    with:
+      package_name: package-template
