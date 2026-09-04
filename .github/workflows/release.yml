@@ -9,6 +9,6 @@ permissions:
 
 jobs:
   release:
-    uses: moglang/package-actions/.github/workflows/source-release.yml@v1
+    uses: kelvralang/package-actions/.github/workflows/source-release.yml@v2
     with:
       package_name: package-template
