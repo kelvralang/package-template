@@ -1,0 +1,5 @@
+const packageTemplate = @import("github.com/kelvralang/package-template")
+
+if (packageTemplate.greeting() != "Kelvra package template") {
+    error("template package greeting")
+}

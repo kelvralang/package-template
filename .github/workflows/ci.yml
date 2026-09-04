@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   compatibility:
-    uses: moglang/package-actions/.github/workflows/source-ci.yml@v1
+    uses: kelvralang/package-actions/.github/workflows/source-ci.yml@v1
     with:
       package_name: package-template
       runtime_ref: main
